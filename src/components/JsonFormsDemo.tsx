@@ -9,6 +9,7 @@ import {
 } from '@jsonforms/material-renderers';
 import RatingControl from './RatingControl';
 import ratingControlTester from '../ratingControlTester';
+import AccordionLayout, { AccordionLayoutTester } from './AccordionLayout';
 import schema from '../schema.json';
 import uischema from '../uischema.json';
 
@@ -43,13 +44,18 @@ const initialData = {
   description: 'Confirm if you have passed the subject\nHereby ...',
   done: true,
   recurrence: 'Daily',
-  rating: 3,
+  rating: 6,
+  subtask: {
+    name: 'Reply to email from Rocky',
+    done: true,
+  },
 };
 
 const renderers = [
   ...materialRenderers,
   //register custom renderers
   { tester: ratingControlTester, renderer: RatingControl },
+  { tester: AccordionLayoutTester, renderer: AccordionLayout },
 ];
 
 export const JsonFormsDemo: FC = () => {

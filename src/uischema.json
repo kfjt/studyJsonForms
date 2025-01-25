@@ -7,19 +7,39 @@
       "scope": "#/properties/done"
     },
     {
-      "type": "Control",
-      "scope": "#/properties/name"
-    },
-    {
-      "type": "HorizontalLayout",
+      "type": "Group",
+      "label": "Task",
       "elements": [
         {
           "type": "Control",
-          "scope": "#/properties/due_date"
+          "scope": "#/properties/name"
         },
         {
-          "type": "Control",
-          "scope": "#/properties/rating"
+          "type": "HorizontalLayout",
+          "elements": [
+            {
+              "type": "Control",
+              "scope": "#/properties/due_date"
+            },
+            {
+              "type": "Control",
+              "scope": "#/properties/rating"
+            }
+          ]
+        },
+        {
+          "type": "Group",
+          "label": "Subtask",
+          "elements": [
+            {
+              "type": "Control",
+              "scope": "#/properties/subtask/properties/name"
+            },
+            {
+              "type": "Control",
+              "scope": "#/properties/subtask/properties/done"
+            }
+          ]
         }
       ]
     },

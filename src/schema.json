@@ -20,6 +20,20 @@
       "type": "integer",
       "maximum": 5
     },
+    "subtask": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 10
+        },
+        "done": {
+          "type": "boolean"
+        }
+      },
+      "required": ["name"]
+    },
     "recurrence": {
       "type": "string",
       "enum": ["Never", "Daily", "Weekly", "Monthly"]
