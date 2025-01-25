@@ -30,3 +30,7 @@ JSON Forms is rendered by importing and using the `JsonForms` component and dire
 ## Custom renderers
 
 Please see [our corresponding tutorial](https://jsonforms.io/docs/tutorial) on how to add custom renderers.
+
+## Screen Shot
+
+![screenshot](screenshot.png)
