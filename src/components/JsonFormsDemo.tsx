@@ -4,6 +4,7 @@ import Grid from '@mui/material/Grid';
 import Button from '@mui/material/Button';
 import Typography from '@mui/material/Typography';
 import {
+  ControlElement,
   GroupLayout,
   isControl,
   isGroup,
@@ -69,48 +70,130 @@ const renderers = [
 const findAndInsertSubstack = (
   uischemaElements: UISchemaElement[],
   count: number,
+  subtaskKeyBase: string,
 ) => {
-  let updatedElements = [...uischemaElements];
-  for (let i = 0; i < updatedElements.length; i++) {
-    const element = updatedElements[i];
-    if (
-      isGroup(element as Layout) &&
-      (element as GroupLayout).label === 'Subtask'
-    ) {
-      updatedElements.splice(i + 1, 0, {
-        ...element,
-        label: `Subtask ${count}`,
-        elements: [
-          ...(element as Layout).elements.map(el => {
-            if (isControl(el)) {
-              return {
-                ...el,
-                scope: el.scope.replace(/subtask/g, `subtask__ADD_${count}`),
-              };
-            } else {
-              return el;
-            }
-          }),
-        ],
-      } as UISchemaElement);
-      return updatedElements;
-    }
+  const subtaskPattern = new RegExp(`^${subtaskKeyBase}(_ADD_\\d+)?$`);
 
-    const layoutElement = element as Layout;
-    if (layoutElement.elements) {
-      const nestedElements = findAndInsertSubstack(
-        layoutElement.elements,
-        count,
-      );
-      if (nestedElements !== layoutElement.elements) {
-        updatedElements[i] = {
-          ...layoutElement,
-          elements: nestedElements,
+  // Find the maximum index for ADD_x and recursively process elements
+  const { maxIndex, processedElements } = findMaxIndexAndProcess(
+    [...uischemaElements],
+    subtaskPattern,
+  );
+  console.log(`maxIndex: ${maxIndex}`);
+
+  // Insert a new subtask after the last 'Subtask' group found
+  return insertNewSubtask(processedElements, count, maxIndex, subtaskKeyBase);
+};
+
+const findMaxIndexAndProcess = (
+  elements: UISchemaElement[],
+  pattern: RegExp,
+) => {
+  let maxIndex = 0;
+
+  const processElement = (element: Layout): Layout => {
+    if (isGroup(element) && (element as GroupLayout).label === 'Subtask') {
+      for (const el of (element as Layout).elements || []) {
+        if (isControl(el) && pattern.test(el.scope)) {
+          const match = el.scope.match(pattern);
+          if (match && match[1]) {
+            const index = parseInt(match[1].split('_')[2], 10);
+            maxIndex = Math.max(maxIndex, index + 1);
+          }
+        } else if (!pattern.test((el as ControlElement).scope)) {
+          maxIndex = Math.max(maxIndex, 0);
+        }
+      }
+
+      // Recursively process nested elements
+      if ((element as Layout).elements) {
+        const nestedElements = findMaxIndexAndProcess(
+          (element as Layout).elements,
+          pattern,
+        );
+        return {
+          ...element,
+          elements: nestedElements.processedElements,
         } as Layout;
       }
     }
+
+    return element;
+  };
+
+  const processedElements = elements
+    .map(el => el as Layout)
+    .map(processElement);
+
+  return { maxIndex, processedElements };
+};
+
+const findSubtaskGroupIndex = (
+  elements: UISchemaElement[],
+): { groupIndex: number; subIndex: number } => {
+  for (let i = 0; i < elements.length; i++) {
+    const element = elements[i] as Layout;
+
+    if (isGroup(element) && (element as GroupLayout).label === 'Subtask') {
+      return { groupIndex: i, subIndex: -1 };
+    }
+
+    // Recursively check nested groups
+    if (isGroup(element)) {
+      const { groupIndex: nestedIndex } = findSubtaskGroupIndex(
+        (element as Layout).elements || [],
+      );
+      if (nestedIndex !== -1) {
+        return { groupIndex: i, subIndex: nestedIndex };
+      }
+    }
   }
-  return updatedElements;
+
+  return { groupIndex: -1, subIndex: -1 };
+};
+
+const insertNewSubtask = (
+  elements: UISchemaElement[],
+  count: number,
+  maxIndex: number,
+  subtaskKeyBase: string,
+) => {
+  const scopePattern = new RegExp(subtaskKeyBase, 'g');
+
+  const { groupIndex } = findSubtaskGroupIndex(elements);
+  console.log(`elements: ${JSON.stringify(elements, null, 2)}`);
+  console.log(`groupIndex: ${groupIndex}`);
+
+  if (groupIndex !== -1) {
+    const newSubtaskLabel = `Subtask ${count}`;
+
+    // Construct the new subtask
+    const newSubtask: UISchemaElement = {
+      ...elements[groupIndex],
+      label: newSubtaskLabel,
+      elements: (elements[groupIndex] as Layout).elements!.map(el => {
+        if (isControl(el)) {
+          return {
+            ...el,
+            scope: el.scope.replace(
+              scopePattern,
+              `${subtaskKeyBase}__ADD_${maxIndex}`,
+            ),
+          };
+        }
+        return el;
+      }) as UISchemaElement[],
+    } as Layout;
+
+    // Insert the new subtask after the found 'Subtask' group
+    elements = [
+      ...elements.slice(0, groupIndex + 1),
+      newSubtask,
+      ...elements.slice(groupIndex + 1),
+    ];
+  }
+
+  return elements;
 };
 
 export const JsonFormsDemo: FC = () => {
@@ -146,7 +229,9 @@ export const JsonFormsDemo: FC = () => {
     updatedUischema.elements = findAndInsertSubstack(
       updatedUischema.elements,
       count,
+      subtaskKeyBase,
     );
+    console.log(`updatedUischema: ${JSON.stringify(updatedUischema, null, 2)}`);
     setUischema(updatedUischema);
   };
 
